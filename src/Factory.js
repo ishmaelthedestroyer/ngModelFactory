@@ -52,14 +52,14 @@ Factory.prototype.$list = function(page, perPage) {
   // ...
 };
 
-Factory.prototype.$listSync = function(page, offset, perPage) {
+Factory.prototype.$listSync = function(page, perPage) {
   // ...
 };
 
-Factory.prototype.$map = function(idList) {
+Factory.prototype.$map = function(ids) {
   // ...
 };
 
-Factory.prototype.$mapSync = function(idList) {
+Factory.prototype.$mapSync = function(ids) {
   // ...
 };
