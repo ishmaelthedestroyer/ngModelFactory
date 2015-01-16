@@ -1,3 +1,9 @@
+app.service("Factory", [
+"$q",
+"Endpoint",
+"Util",
+function($q, Endpoint, util) {
+
 var Factory = function(Model, config) {
   var configDefaults = {
     endpoints: {
@@ -49,3 +55,40 @@ Factory.prototype.$map = function(ids) {
 Factory.prototype.$mapSync = function(ids) {
   // ...
 };
+
+return Factory;
+
+}
+]);
+
+app.service("Model", [
+"$q",
+"Endpoint",
+"Util",
+function($q, Endpoint, util) {
+
+var Model = function() {
+  // ...
+};
+
+Model.prototype.$serialize = function() {
+  // ...
+};
+
+Model.prototype.$save = function() {
+  // ...
+};
+
+Model.prototype.$delete = function() {
+  // ...
+};
+
+return Model;
+
+}
+]);
+
+angular.module("ngModelFactory", [
+"Factory",
+"Model"
+]);

@@ -1,3 +1,9 @@
+app.service("Factory", [
+"$q",
+"Endpoint",
+"Util",
+function($q, Endpoint, util) {
+
 var Factory = function(Model, config) {
   var configDefaults = {
     endpoints: {
@@ -49,3 +55,8 @@ Factory.prototype.$map = function(ids) {
 Factory.prototype.$mapSync = function(ids) {
   // ...
 };
+
+return Factory;
+
+}
+]);
