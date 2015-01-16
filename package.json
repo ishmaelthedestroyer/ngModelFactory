@@ -1,0 +1,19 @@
+{
+  "name": "ngModelFactory",
+  "version": "0.0.0",
+  "description": "Angular wrapper for the Model / Factory pattern.",
+  "main": "index.js",
+  "scripts": {
+    "test": "grunt test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:ishmaelthedestroyer/ngModelFactory.git"
+  },
+  "author": "ishmaelthedestroyer <ishmaelthedestroyer@gmail.com> (http://ishmaelthedestroyer.com/)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ishmaelthedestroyer/ngModelFactory/issues"
+  },
+  "homepage": "https://github.com/ishmaelthedestroyer/ngModelFactory"
+}
