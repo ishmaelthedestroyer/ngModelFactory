@@ -53,9 +53,11 @@ module.exports = function(grunt) {
           // stripBanners: true
           banner: 'app.service("Factory", [\n' +
           '"$q",\n' +
+          '"Model",\n' +
           '"Endpoint",\n' +
+          '"EventEmitter",\n' +
           '"Util",\n' +
-          'function($q, Endpoint, util) {\n\n',
+          'function($q, Model, Endpoint, EventEmitter, util) {\n\n',
           footer: '\n\n' +
           'return Factory;\n\n}' +
           '\n]);'
@@ -76,8 +78,9 @@ module.exports = function(grunt) {
           banner: 'app.service("Model", [\n' +
           '"$q",\n' +
           '"Endpoint",\n' +
+          '"EventEmitter",\n' +
           '"Util",\n' +
-          'function($q, Endpoint, util) {\n\n',
+          'function($q, Endpoint, EventEmitter, util) {\n\n',
           footer: '\n\n' +
           'return Model;\n\n}' +
           '\n]);'

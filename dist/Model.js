@@ -1,8 +1,9 @@
 app.service("Model", [
 "$q",
 "Endpoint",
+"EventEmitter",
 "Util",
-function($q, Endpoint, util) {
+function($q, Endpoint, EventEmitter, util) {
 
 var Model = function() {
   // ...
