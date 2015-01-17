@@ -60,5 +60,16 @@ app.put('/models/:id', function(req, res) {
   return res.status(404).end();
 });
 
+app.delete('/models/:id', function(req, res) {
+  for (var i = 0, len = models.length; i < len; i++) {
+    if (models[i]._id.toString() === req.params.id.toString()) {
+      models.splice(i, 1);
+      return res.status(204).end();
+    }
+  }
+
+  return res.status(404).end();
+});
+
 app.listen(port);
 console.log('Server listening on port ' + port + '.');

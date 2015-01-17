@@ -14,10 +14,14 @@
             </h2>
             <pre><p data-ng-repeat='model in AppCtrl.list'>{{ model | json }}</p></pre>
 
+            <div style='clear: both; margin-bottom: 100px;'></div>
+
             <h2>
                 factory.$find(2)
             </h2>
             <pre><p>{{ AppCtrl.model.$serialize() | json }}</p></pre>
+
+            <div style='clear: both; margin-bottom: 100px;'></div>
 
             <h2>
                 model.$update()
@@ -47,6 +51,22 @@
                     Submit
                 </button>
             </form>
+
+            <div style='clear: both; margin-bottom: 100px;'></div>
+
+            <h2>
+                model.$delete()
+                <small>
+                    Open developer tools, inspect requests
+                </small>
+            </h2>
+
+            <button
+              type="submit"
+              class="btn btn-danger"
+              data-ng-click='AppCtrl.model.$delete()'>
+                Delete
+            </button>
         </div>
     </div>
 </div>
@@ -86,6 +106,18 @@
               .then(function(models) {
                   angular.forEach(models, function(model) {
                       alias.list.push(model);
+                      model.on('$delete', function() {
+                          for (var i = 0, len = alias.list.length; i < len; i++) {
+                              if (alias.list[i]._id.toString() === model._id.toString()) {
+                                  alias.list.splice(i, 1);
+                                  break;
+                              }
+                          }
+
+                          if (alias.model._id.toString() === model._id.toString()) {
+                              alias.model = null;
+                          }
+                      });
                   });
               })
               .catch(function(err) {

@@ -319,7 +319,7 @@ Model._$init = function(config) {
         /**
          * HTTP method + path for `delete` requests
          */
-        del: { method: 'DEL', path: '/models/:id' }
+        del: { method: 'DELETE', path: '/models/:id' }
       }
     };
 
@@ -386,14 +386,6 @@ Model.prototype.$save = function() {
       data: alias.$serialize()
     };
 
-  if (alias._$isLocal) {
-    config.method = 'POST';
-    config.path = '/v1/collections';
-  } else {
-    config.method = 'PUT';
-    config.path = '/v1/collections/' + alias._id;
-  }
-
   var promise = Model._$request(
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
@@ -419,11 +411,20 @@ Model.prototype.$save = function() {
  * @returns {$q.promise}
  */
 Model.prototype.$delete = function() {
-  var deferred = $q.defer();
+  var alias = this;
 
-  // TODO: ...
+  alias.emit('$delete', alias);
+  var promise = Model._$request('del', alias._id);
 
-  return deferred.promise;
+  promise
+    .then(function(response) {
+      // ...
+    })
+    .catch(function(err) {
+      // ...
+    });
+
+  return promise;
 };
 
 Model._$init(null);
