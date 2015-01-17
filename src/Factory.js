@@ -147,10 +147,17 @@ Factory.prototype.$create = function(data) {
  * @returns {$q.promise}
  */
 Factory.prototype._$request = function(type, id, page, perPage) {
-  var alias = this;
+  var
+    alias = this,
+    path = alias.config.endpoints[type].path;
+
+  while (path !== (path = path.replace(':id', id))) {
+    console.log('Replacing :id...');
+  }
+
   return new Endpoint.Request({
     method: alias.config.endpoints[type].method,
-    path: alias.config.endpoints[type].path
+    path: path
   }).execute();
 };
 

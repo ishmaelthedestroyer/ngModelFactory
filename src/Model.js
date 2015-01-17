@@ -14,8 +14,20 @@ var Model = function(data) {
   return alias;
 };
 
+/**
+ * extracts the keys from the model instance, serializes into a JSON object
+ * @returns {Object}
+ */
 Model.prototype.$serialize = function() {
-  // ...
+  var
+    alias = this,
+    serializedModel = {};
+
+  for (var key in alias) {
+    serializedModel[key] = alias[key];
+  }
+
+  return serializedModel;
 };
 
 Model.prototype.$save = function() {

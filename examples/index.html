@@ -10,9 +10,14 @@
     <div class='row'>
         <div class='col-xs-12'>
             <h2>
-                Models
+                factory.$list()
             </h2>
-            <pre><p data-ng-repeat='model in AppCtrl.models'>{{ model }}</p></pre>
+            <pre><p data-ng-repeat='model in AppCtrl.list'>{{ model | json }}</p></pre>
+
+            <h2>
+                factory.$find(2)
+            </h2>
+            <pre><p>{{ AppCtrl.find.$serialize() | json }}</p></pre>
         </div>
     </div>
 </div>
@@ -38,23 +43,35 @@
               factory = new Factory(Model, {
                   endpoints: {
                       list: { method: 'GET', path: '/models' },
-                      find: { method: 'GET', path: '' },
+                      find: { method: 'GET', path: '/models/:id' },
                       create: { method: 'POST', path: '' },
                       update: { method: 'PUT', path: '' },
                       del: { method: 'DEL', path: '' }
                   }
               });
 
-            alias.models = [];
+            // `factory.$list()`
+            alias.list = [];
             factory
               .$list()
               .then(function(models) {
                   angular.forEach(models, function(model) {
-                      alias.models.push(model);
+                      alias.list.push(model);
                   });
               })
               .catch(function(err) {
-                  $log.error('Error loading models!');
+                  $log.error('Error requesting `factory.$list()`!');
+              });
+
+            // `factory.find(1)`
+            alias.find = null;
+            factory
+              .$find(2)
+              .then(function(model) {
+                  alias.find = model;
+              })
+              .catch(function(err) {
+                  $log.error('Error requesting `factory.$find()`!');
               });
 
             return alias;

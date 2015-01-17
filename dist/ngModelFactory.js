@@ -156,10 +156,17 @@ Factory.prototype.$create = function(data) {
  * @returns {$q.promise}
  */
 Factory.prototype._$request = function(type, id, page, perPage) {
-  var alias = this;
+  var
+    alias = this,
+    path = alias.config.endpoints[type].path;
+
+  while (path !== (path = path.replace(':id', id))) {
+    console.log('Replacing :id...');
+  }
+
   return new Endpoint.Request({
     method: alias.config.endpoints[type].method,
-    path: alias.config.endpoints[type].path
+    path: path
   }).execute();
 };
 
@@ -262,8 +269,20 @@ var Model = function(data) {
   return alias;
 };
 
+/**
+ * extracts the keys from the model instance, serializes into a JSON object
+ * @returns {Object}
+ */
 Model.prototype.$serialize = function() {
-  // ...
+  var
+    alias = this,
+    serializedModel = {};
+
+  for (var key in alias) {
+    serializedModel[key] = alias[key];
+  }
+
+  return serializedModel;
 };
 
 Model.prototype.$save = function() {
