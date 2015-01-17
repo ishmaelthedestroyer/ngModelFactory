@@ -43,7 +43,7 @@ util.inherits(Model, EventEmitter);
 Model._$request = function(type, id, page, perPage, data, params) {
   var
     alias = this,
-    path = alias.Model._$config.endpoints[type].path,
+    path = alias._$config.endpoints[type].path,
     config;
 
   while (path !== (path = path.replace(':id', id))) {
@@ -51,7 +51,7 @@ Model._$request = function(type, id, page, perPage, data, params) {
   }
 
   config = {
-    method: alias.Model._$config.endpoints[type].method,
+    method: alias._$config.endpoints[type].method,
     path: path
   };
 
