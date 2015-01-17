@@ -9,6 +9,12 @@ Angular wrapper for the Javascript implementation of the Model / Factory pattern
 - documentation
 - unit tests
 
+## Dependencies
+
+- EventEmitter: https://github.com/ishmaelthedestroyer/EventEmitter
+- Endpoint: https://github.com/ishmaelthedestroyer/Endpoint
+- Util: https://github.com/ishmaelthedestroyer/Util
+
 ## Inheritance
 
 ```
