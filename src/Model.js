@@ -43,7 +43,7 @@ util.inherits(Model, EventEmitter);
 Model._$request = function(type, id, page, perPage, data, params) {
   var
     alias = this,
-    path = Model._$config.endpoints[type].path,
+    path = alias.Model._$config.endpoints[type].path,
     config;
 
   while (path !== (path = path.replace(':id', id))) {
@@ -51,7 +51,7 @@ Model._$request = function(type, id, page, perPage, data, params) {
   }
 
   config = {
-    method: Model._$config.endpoints[type].method,
+    method: alias.Model._$config.endpoints[type].method,
     path: path
   };
 
@@ -128,7 +128,7 @@ Model._$init = function(config) {
    * @type {Object}
    */
     // FIXME: use `util.deepExtend`
-  Model._$config = util.extend(configDefaults, config);
+  alias._$config = util.extend(configDefaults, config);
 
   return alias;
 };
@@ -186,7 +186,7 @@ Model.prototype.$save = function() {
       data: alias.$serialize()
     };
 
-  var promise = Model._$request(
+  var promise = alias.constructor.Model._$request(
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
     null, // page (pagination)
@@ -214,7 +214,7 @@ Model.prototype.$delete = function() {
   var alias = this;
 
   alias.emit('$delete', alias);
-  var promise = Model._$request('del', alias._id);
+  var promise = alias.constructor.Model._$request('del', alias._id);
 
   promise
     .then(function(response) {

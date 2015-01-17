@@ -64,7 +64,7 @@ var Factory = function(Model, config) {
    */
     // FIXME: use `util.deepExtend`
   alias.config = util.extend(configDefaults, config);
-  Model._$init(config);
+  alias.Model._$init(config);
 
   // expose instance
   return alias;
