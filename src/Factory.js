@@ -90,8 +90,28 @@ Factory.prototype._$wrap = function(data) {
   return alias.store[data._id];
 };
 
+/**
+ * sets listeners on a model instance
+ * @param model {Model}
+ * @returns {Factory}
+ */
 Factory.prototype._$registerListeners = function(model) {
-  // ...
+  var alias = this;
+  model.on('$update', function(newValues, oldValues) {
+    // $log.debug(TAG + 'registerEvents', newValues, oldValues);
+
+    if (newValues._id !== oldValues._id) {
+      // $log.debug(TAG + 'registerEvents', '_id updated.');
+      delete alias.store[model._id];
+      alias.store[model._id] = model;
+    }
+  });
+
+  model.on('$delete', function(model) {
+    delete alias.store[model._id];
+  });
+
+  return alias;
 };
 
 /**
