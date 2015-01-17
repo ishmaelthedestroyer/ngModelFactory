@@ -51,7 +51,8 @@ module.exports = function(grunt) {
       factory: {
         options: {
           // stripBanners: true
-          banner: 'app.service("Factory", [\n' +
+          banner: 'angular.module("Factory", ["EventEmitter", "Endpoint", "Util"])\n' +
+          '.service("Factory", [\n' +
           '"$q",\n' +
           '"Model",\n' +
           '"Endpoint",\n' +
@@ -75,7 +76,8 @@ module.exports = function(grunt) {
       model: {
         options: {
           // stripBanners: true
-          banner: 'app.service("Model", [\n' +
+          banner: 'angular.module("Model", ["EventEmitter", "Endpoint", "Util"])\n' +
+          '.service("Model", [\n' +
           '"$q",\n' +
           '"Endpoint",\n' +
           '"EventEmitter",\n' +

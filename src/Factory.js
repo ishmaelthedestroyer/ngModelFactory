@@ -51,7 +51,8 @@ var Factory = function(Model, config) {
    * configuration for factory, merge of defaults w/ user supplied
    * @type {Object}
    */
-  this.config = util.deepExtend(configDefaults, config);
+    // FIXME: use `util.deepExtend`
+  this.config = util.extend(configDefaults, config);
 
   /**
    * cache of instantiated models, the keys being the ids of each instance
@@ -146,6 +147,7 @@ Factory.prototype.$create = function(data) {
  * @returns {$q.promise}
  */
 Factory.prototype._$request = function(type, id, page, perPage) {
+  var alias = this;
   return new Endpoint.Request({
     method: alias.config.endpoints[type].method,
     path: alias.config.endpoints[type].path
@@ -194,7 +196,14 @@ Factory.prototype.$list = function(page, perPage, ignoreCache) {
   alias
     ._$request('list', null, page, perPage, ignoreCache)
     .then(function(data) {
-      deferred.resolve(alias._$wrap(data));
+      var output = [];
+      angular.forEach(data, function(modelData) {
+        output.push(alias._$wrap(modelData));
+      });
+
+      // delete throttle[throttleKey];
+      deferred.resolve(output);
+      // deferred.resolve(alias._$wrap(data));
     })
     .catch(function(err) {
       deferred.reject(err);

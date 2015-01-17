@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html data-ng-app='app'>
+<head>
+    <title>Basic Examples</title>
+    <link rel="stylesheet" type="text/css" href="./vendor/bootstrap/dist/css/bootstrap.min.css"/>
+</head>
+<body data-ng-controller='AppCtrl as AppCtrl'>
+
+<div class='container'>
+    <div class='row'>
+        <div class='col-xs-12'>
+            <h2>
+                Models
+            </h2>
+            <pre><p data-ng-repeat='model in AppCtrl.models'>{{ model }}</p></pre>
+        </div>
+    </div>
+</div>
+
+<script src='./vendor/angular/angular.js'></script>
+<script src='../deps/Endpoint/dist/Endpoint.js'></script>
+<script src='../deps/EventEmitter/dist/EventEmitter.js'></script>
+<script src='../deps/Util/dist/Util.js'></script>
+<script src='../dist/ngModelFactory.js'></script>
+<script>
+    var app = angular.module('app', [
+        'ngModelFactory'
+    ]);
+
+    app.controller('AppCtrl', [
+        '$log',
+        'Factory',
+        'Model',
+        function($log, Factory, Model) {
+            $log.debug('App loaded.');
+            var
+              alias = this,
+              factory = new Factory(Model, {
+                  endpoints: {
+                      list: { method: 'GET', path: '/models' },
+                      find: { method: 'GET', path: '' },
+                      create: { method: 'POST', path: '' },
+                      update: { method: 'PUT', path: '' },
+                      del: { method: 'DEL', path: '' }
+                  }
+              });
+
+            alias.models = [];
+            factory
+              .$list()
+              .then(function(models) {
+                  angular.forEach(models, function(model) {
+                      alias.models.push(model);
+                  });
+              })
+              .catch(function(err) {
+                  $log.error('Error loading models!');
+              });
+
+            return alias;
+        }
+    ]);
+</script>
+</body>
+</html>
