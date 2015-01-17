@@ -1,11 +1,12 @@
 angular.module("Factory", ["EventEmitter", "Endpoint", "Util"])
 .service("Factory", [
+"$log",
 "$q",
 "Model",
 "Endpoint",
 "EventEmitter",
 "Util",
-function($q, Model, Endpoint, EventEmitter, util) {
+function($log, $q, Model, Endpoint, EventEmitter, util) {
 
 /* ==========================================================================
    Constructors
@@ -31,6 +32,12 @@ var Factory = function(Model, config) {
    */
   var configDefaults = {
     /**
+     * log identifier
+     * @type {String}
+     */
+    TAG: 'Factory::',
+
+    /**
      * configuration for communicating with RESTful endpoints
      */
     endpoints: {
@@ -42,13 +49,6 @@ var Factory = function(Model, config) {
       perPage: 20
     }
   };
-
-  /**
-   * configuration for factory, merge of defaults w/ user supplied
-   * @type {Object}
-   */
-    // FIXME: use `util.deepExtend`
-  alias.config = util.extend(configDefaults, config);
 
   /**
    * cache of instantiated models, the keys being the ids of each instance
@@ -67,6 +67,14 @@ var Factory = function(Model, config) {
    * @type {Model}
    */
   alias.Model = Model;
+
+  /**
+   * configuration for factory, merge of defaults w/ user supplied
+   * @type {Object}
+   */
+    // FIXME: use `util.deepExtend`
+  alias.config = util.extend(configDefaults, config);
+  Model._$init(config);
 
   // expose instance
   return alias;
@@ -128,16 +136,17 @@ Factory.prototype._$wrap = function(data) {
 Factory.prototype._$registerListeners = function(model) {
   var alias = this;
   model.on('$update', function(newValues, oldValues) {
-    // $log.debug(TAG + 'registerEvents', newValues, oldValues);
+    $log.debug(alias.config.TAG + 'registerEvents', newValues, oldValues);
 
     if (newValues._id !== oldValues._id) {
-      // $log.debug(TAG + 'registerEvents', '_id updated.');
+      $log.debug(alias.config.TAG + 'registerEvents', '_id updated.');
       delete alias.store[model._id];
       alias.store[model._id] = model;
     }
   });
 
   model.on('$delete', function(model) {
+    $log.debug(alias.config.TAG + 'registerEvents', 'Model deleted.', model);
     delete alias.store[model._id];
   });
 
@@ -254,11 +263,12 @@ return Factory;
 
 angular.module("Model", ["EventEmitter", "Endpoint", "Util"])
 .service("Model", [
+"$log",
 "$q",
 "Endpoint",
 "EventEmitter",
 "Util",
-function($q, Endpoint, EventEmitter, util) {
+function($log, $q, Endpoint, EventEmitter, util) {
 
 /* ==========================================================================
    Constructors
@@ -270,9 +280,9 @@ function($q, Endpoint, EventEmitter, util) {
  * @returns {Model}
  * @constructor
  */
-var Model = function(data, config) {
+var Model = function(data) {
   if (!(this instanceof Model)) {
-    return new Model(data, config);
+    return new Model(data);
   }
 
   EventEmitter.call(this);

@@ -53,12 +53,13 @@ module.exports = function(grunt) {
           // stripBanners: true
           banner: 'angular.module("Factory", ["EventEmitter", "Endpoint", "Util"])\n' +
           '.service("Factory", [\n' +
+          '"$log",\n' +
           '"$q",\n' +
           '"Model",\n' +
           '"Endpoint",\n' +
           '"EventEmitter",\n' +
           '"Util",\n' +
-          'function($q, Model, Endpoint, EventEmitter, util) {\n\n',
+          'function($log, $q, Model, Endpoint, EventEmitter, util) {\n\n',
           footer: '\n\n' +
           'return Factory;\n\n}' +
           '\n]);'
@@ -78,11 +79,12 @@ module.exports = function(grunt) {
           // stripBanners: true
           banner: 'angular.module("Model", ["EventEmitter", "Endpoint", "Util"])\n' +
           '.service("Model", [\n' +
+          '"$log",\n' +
           '"$q",\n' +
           '"Endpoint",\n' +
           '"EventEmitter",\n' +
           '"Util",\n' +
-          'function($q, Endpoint, EventEmitter, util) {\n\n',
+          'function($log, $q, Endpoint, EventEmitter, util) {\n\n',
           footer: '\n\n' +
           'return Model;\n\n}' +
           '\n]);'

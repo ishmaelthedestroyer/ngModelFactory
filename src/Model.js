@@ -8,9 +8,9 @@
  * @returns {Model}
  * @constructor
  */
-var Model = function(data, config) {
+var Model = function(data) {
   if (!(this instanceof Model)) {
-    return new Model(data, config);
+    return new Model(data);
   }
 
   EventEmitter.call(this);

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html data-ng-app='app'>
+<head>
+    <title>Inheritance Examples</title>
+    <link rel="stylesheet" type="text/css" href="./vendor/bootstrap/dist/css/bootstrap.min.css"/>
+</head>
+<body data-ng-controller='AppCtrl as AppCtrl'>
+
+<div class='container'>
+    <div class='row'>
+        <div class='col-xs-12'>
+            <h2>
+                UserFactory.$list()
+            </h2>
+            <pre><p data-ng-repeat='model in AppCtrl.list'>{{ model | json }}</p></pre>
+
+            <div style='clear: both; margin-bottom: 100px;'></div>
+
+            <h2>
+                UserFactory.$find(2)
+            </h2>
+            <pre><p>{{ AppCtrl.model.$serialize() | json }}</p></pre>
+
+            <h2>
+                user.follow(user2)
+            </h2>
+            <button
+              type="button"
+              class="btn btn-primary"
+              data-ng-click='AppCtrl.list[0].follow(AppCtrl.user)'>
+                Follow
+            </button>
+            <pre><p data-ng-repeat='model in AppCtrl.user.followers track by $index'>{{ model | json }}</p></pre>
+
+            <div style='clear: both; margin-bottom: 100px;'></div>
+
+            <h2>
+                model.$delete()
+                <small>
+                    Open developer tools, inspect requests
+                </small>
+            </h2>
+
+            <button
+              type="submit"
+              class="btn btn-danger"
+              data-ng-click='AppCtrl.user.$delete()'>
+                Delete
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src='./vendor/angular/angular.js'></script>
+<script src='../deps/Endpoint/dist/Endpoint.js'></script>
+<script src='../deps/EventEmitter/dist/EventEmitter.js'></script>
+<script src='../deps/Util/dist/Util.js'></script>
+<script src='../dist/ngModelFactory.js'></script>
+<script>
+    var app = angular.module('app', [
+        'ngModelFactory'
+    ]);
+
+    app.service('User', [
+        '$log',
+        'Model',
+        'Util',
+        function($log, Model, util) {
+            var User = function(data) {
+                if (!(this instanceof User)) {
+                    return new User(User, config);
+                }
+
+                Model.call(this, data);
+
+                this.followers = [];
+
+                return this;
+            };
+
+            util.inherits(User, Model);
+
+            User.prototype.follow = function(user) {
+                user.followers.push(this);
+            };
+
+            return User;
+        }
+    ]);
+
+    app.service('UserFactory', [
+        'Factory',
+        'User',
+        'Util',
+        function(Factory, User, util) {
+            var UserFactory = function(User, config) {
+                if (!(this instanceof UserFactory)) {
+                    return new UserFactory(User, config);
+                }
+
+                Factory.call(this, User, config);
+                return this;
+            };
+
+            util.inherits(UserFactory, Factory);
+            return new UserFactory(User, {
+                endpoints: {
+                    list: { method: 'GET', path: '/users' },
+                    find: { method: 'GET', path: '/users/:id' },
+                    create: { method: 'POST', path: '/users' },
+                    update: { method: 'PUT', path: '/users/:id' },
+                    del: { method: 'DELETE', path: '/users/:id' }
+                }
+            });
+        }
+    ]);
+
+    app.controller('AppCtrl', [
+        '$log',
+        'UserFactory',
+        function($log, UserFactory) {
+            $log.debug('App loaded.');
+
+            var alias = this;
+
+            // `factory.$list()`
+            alias.list = [];
+            UserFactory
+              .$list()
+              .then(function(models) {
+                  angular.forEach(models, function(model) {
+                      alias.list.push(model);
+                      model.on('$delete', function() {
+                          for (var i = 0, len = alias.list.length; i < len; i++) {
+                              if (alias.list[i]._id.toString() === model._id.toString()) {
+                                  alias.list.splice(i, 1);
+                                  break;
+                              }
+                          }
+
+                          if (alias.user._id.toString() === model._id.toString()) {
+                              alias.user = null;
+                          }
+                      });
+                  });
+              })
+              .catch(function(err) {
+                  $log.error('Error requesting `UserFactory.$list()`!');
+              });
+
+            // `factory.find(1)`
+            alias.model = null;
+            UserFactory
+              .$find(2)
+              .then(function(model) {
+                  alias.user = model;
+              })
+              .catch(function(err) {
+                  $log.error('Error requesting `UserFactory.$find()`!');
+              });
+
+            return alias;
+        }
+    ]);
+</script>
+</body>
+</html>
