@@ -17,7 +17,36 @@
             <h2>
                 factory.$find(2)
             </h2>
-            <pre><p>{{ AppCtrl.find.$serialize() | json }}</p></pre>
+            <pre><p>{{ AppCtrl.model.$serialize() | json }}</p></pre>
+
+            <h2>
+                model.$update()
+            </h2>
+
+            <form>
+                <div class="form-group">
+                    <label for="_id">_id</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="_id"
+                      data-ng-model='AppCtrl.model._id'>
+                </div>
+                <div class="form-group">
+                    <label for="name">name</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      id="name"
+                      data-ng-model='AppCtrl.model.name'>
+                </div>
+                <button
+                  type="submit"
+                  class="btn btn-default"
+                  data-ng-click='AppCtrl.model.$save()'>
+                    Submit
+                </button>
+            </form>
         </div>
     </div>
 </div>
@@ -64,11 +93,11 @@
               });
 
             // `factory.find(1)`
-            alias.find = null;
+            alias.model = null;
             factory
               .$find(2)
               .then(function(model) {
-                  alias.find = model;
+                  alias.model = model;
               })
               .catch(function(err) {
                   $log.error('Error requesting `factory.$find()`!');

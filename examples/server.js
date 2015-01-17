@@ -36,10 +36,23 @@ app.get('/models', function(req, res) {
   res.status(200).json(models);
 });
 
-
 app.get('/models/:id', function(req, res) {
   for (var i = 0, len = models.length; i < len; i++) {
     if (models[i]._id.toString() === req.params.id.toString()) {
+      return res.status(200).json(models[i]);
+    }
+  }
+
+  return res.status(404).end();
+});
+
+app.put('/models/:id', function(req, res) {
+  for (var i = 0, len = models.length; i < len; i++) {
+    if (models[i]._id.toString() === req.params.id.toString()) {
+      for (var key in req.body) {
+        models[i][key] = req.body[key];
+      }
+
       return res.status(200).json(models[i]);
     }
   }

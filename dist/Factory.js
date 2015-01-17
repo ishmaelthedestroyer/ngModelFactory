@@ -8,51 +8,27 @@ angular.module("Factory", ["EventEmitter", "Endpoint", "Util"])
 function($q, Model, Endpoint, EventEmitter, util) {
 
 var Factory = function(Model, config) {
+  if (!(this instanceof Factory)) {
+    return new Factory(Model, config);
+  }
+
+  EventEmitter.call(this);
+  var alias = this;
+
   /**
    * default configuration for the factory
    */
   var configDefaults = {
     /**
-     * configuration for commumicating with RESTful endpoints
+     * configuration for communicating with RESTful endpoints
      */
     endpoints: {
-
-      /**
-       * optional prefix for the endpoints
-       * @type {String}
-       */
-      prefix: '',
 
       /**
        * number of items to request for paginated `list` requests
        * @type {Number}
        */
-      perPage: 20,
-
-      /**
-       * HTTP method + path for `list` requests
-       */
-      list: { method: 'GET', path: '' },
-
-      /**
-       * HTTP method + path for `find` requests
-       */
-      find: { method: 'GET', path: '' },
-
-      /**
-       * HTTP method + path for `create` requests
-       */
-      create: { method: 'POST', path: '' },
-
-      /**
-       * HTTP method + path for `update` requests
-       */
-      update: { method: 'PUT', path: '' },
-
-      /**
-       * HTTP method + path for `delete` requests
-       */
-      del: { method: 'DEL', path: '' }
+      perPage: 20
     }
   };
 
@@ -61,29 +37,31 @@ var Factory = function(Model, config) {
    * @type {Object}
    */
     // FIXME: use `util.deepExtend`
-  this.config = util.extend(configDefaults, config);
+  alias.config = util.extend(configDefaults, config);
 
   /**
    * cache of instantiated models, the keys being the ids of each instance
    * @type {Object}
    */
-  this.store = {};
+  alias.store = {};
 
   /**
    * used to throttle outgoing requests for the same data
    * @type {Object}
    */
-  this.throttle = {};
+  alias.throttle = {};
 
   /**
    * reference to model for later instantiations
    * @type {Model}
    */
-  this.Model = Model;
+  alias.Model = Model;
 
   // expose instance
-  return this;
+  return alias;
 };
+
+util.inherits(Factory, EventEmitter);
 
 /**
  * converts the local cache into an array of models
@@ -148,29 +126,6 @@ Factory.prototype.$create = function(data) {
 };
 
 /**
- * performs a CRUD request
- * @param type {String} CRUD type
- * @param id {String} id of object to request
- * @param page {Number} optional page, if paginating
- * @param perPage {Number} optional items to return per page, if paginating
- * @returns {$q.promise}
- */
-Factory.prototype._$request = function(type, id, page, perPage) {
-  var
-    alias = this,
-    path = alias.config.endpoints[type].path;
-
-  while (path !== (path = path.replace(':id', id))) {
-    console.log('Replacing :id...');
-  }
-
-  return new Endpoint.Request({
-    method: alias.config.endpoints[type].method,
-    path: path
-  }).execute();
-};
-
-/**
  * makes an async HTTP request to find a `Model` instance;
  * @param id {String} id of `Model` to find
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
@@ -181,7 +136,7 @@ Factory.prototype.$find = function(id, ignoreCache) {
     alias = this,
     deferred = $q.defer();
 
-  alias
+  alias.Model
     ._$request('find', id, null, null, ignoreCache)
     .then(function(data) {
       deferred.resolve(alias._$wrap(data));
@@ -209,7 +164,7 @@ Factory.prototype.$list = function(page, perPage, ignoreCache) {
     alias = this,
     deferred = $q.defer();
 
-  alias
+  alias.Model
     ._$request('list', null, page, perPage, ignoreCache)
     .then(function(data) {
       var output = [];
