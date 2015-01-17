@@ -179,15 +179,16 @@ Factory.prototype.$create = function(data) {
  * makes an async HTTP request to find a `Model` instance;
  * @param id {String} id of `Model` to find
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
+ * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$find = function(id, ignoreCache) {
+Factory.prototype.$find = function(id, ignoreCache, params) {
   var
     alias = this,
     deferred = $q.defer();
 
   alias.Model
-    ._$request('find', id, null, null, ignoreCache)
+    ._$request('find', id, null, null, ignoreCache, params || null)
     .then(function(data) {
       deferred.resolve(alias._$wrap(data));
     })
@@ -203,15 +204,16 @@ Factory.prototype.$find = function(id, ignoreCache) {
  * @param page {Number} optional page, defaults to 1
  * @param perPage {Number} optional per page, defaults to config
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
+ * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$list = function(page, perPage, ignoreCache) {
+Factory.prototype.$list = function(page, perPage, ignoreCache, params) {
   var
     alias = this,
     deferred = $q.defer();
 
   alias.Model
-    ._$request('list', null, page, perPage, ignoreCache)
+    ._$request('list', null, page, perPage, ignoreCache, params || null)
     .then(function(data) {
       var output = [];
       angular.forEach(data, function(modelData) {
@@ -233,9 +235,10 @@ Factory.prototype.$list = function(page, perPage, ignoreCache) {
  * takes a list of ids, inflates them into `Model` instances
  * @param ids {String|String[]} id or list of ids to inflate
  * @param ignoreCache {Boolean} if any of the models are stored, this flag specifies to ignore the cache
+ * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$map = function(ids, ignoreCache) {
+Factory.prototype.$map = function(ids, ignoreCache, params) {
   var deferred = $q.defer();
 
   // TODO: ...
@@ -309,9 +312,10 @@ util.inherits(Model, EventEmitter);
  * @param page {Number} optional page, if paginating
  * @param perPage {Number} optional items to return per page, if paginating
  * @param data {Object} optional data to send if PUT, POST, or DELETE request
+ * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Model._$request = function(type, id, page, perPage, data) {
+Model._$request = function(type, id, page, perPage, data, params) {
   var
     alias = this,
     path = Model._$config.endpoints[type].path,
@@ -328,6 +332,15 @@ Model._$request = function(type, id, page, perPage, data) {
 
   if (data) {
     config.data = data;
+  }
+
+  if (params) {
+    var queryParams = [];
+    for (var key in params) {
+      queryParams.push(key + '=' + params[key]);
+    }
+
+    config.path += '?' + queryParams.join('&');
   }
 
   return new Endpoint.Request(config).execute();

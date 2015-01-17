@@ -46,9 +46,10 @@ util.inherits(Model, EventEmitter);
  * @param page {Number} optional page, if paginating
  * @param perPage {Number} optional items to return per page, if paginating
  * @param data {Object} optional data to send if PUT, POST, or DELETE request
+ * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Model._$request = function(type, id, page, perPage, data) {
+Model._$request = function(type, id, page, perPage, data, params) {
   var
     alias = this,
     path = Model._$config.endpoints[type].path,
@@ -65,6 +66,15 @@ Model._$request = function(type, id, page, perPage, data) {
 
   if (data) {
     config.data = data;
+  }
+
+  if (params) {
+    var queryParams = [];
+    for (var key in params) {
+      queryParams.push(key + '=' + params[key]);
+    }
+
+    config.path += '?' + queryParams.join('&');
   }
 
   return new Endpoint.Request(config).execute();

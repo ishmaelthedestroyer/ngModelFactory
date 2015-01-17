@@ -126,7 +126,7 @@
             // `factory.$list()`
             alias.list = [];
             UserFactory
-              .$list()
+              .$list(1, 20, false, { foo: 'bar', bam: 'bop' })
               .then(function(models) {
                   angular.forEach(models, function(model) {
                       alias.list.push(model);
