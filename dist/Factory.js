@@ -7,6 +7,17 @@ angular.module("Factory", ["EventEmitter", "Endpoint", "Util"])
 "Util",
 function($q, Model, Endpoint, EventEmitter, util) {
 
+/* ==========================================================================
+   Constructors
+   ========================================================================== */
+
+/**
+ * generic Factory model
+ * @param Model {Model} model to manage
+ * @param config {Object} configuration for factory
+ * @returns {Factory}
+ * @constructor
+ */
 var Factory = function(Model, config) {
   if (!(this instanceof Factory)) {
     return new Factory(Model, config);
@@ -62,6 +73,16 @@ var Factory = function(Model, config) {
 };
 
 util.inherits(Factory, EventEmitter);
+
+/* ==========================================================================
+   Class-level methods
+   ========================================================================== */
+
+// ...
+
+/* ==========================================================================
+   Instance-level methods
+   ========================================================================== */
 
 /**
  * converts the local cache into an array of models
@@ -168,10 +189,6 @@ Factory.prototype.$find = function(id, ignoreCache) {
   return deferred.promise;
 };
 
-Factory.prototype.$findSync = function(id) {
-  // ...
-};
-
 /**
  * makes an async HTTP request for a `list` CRUD operation
  * @param page {Number} optional page, defaults to 1
@@ -203,16 +220,31 @@ Factory.prototype.$list = function(page, perPage, ignoreCache) {
   return deferred.promise;
 };
 
-Factory.prototype.$listSync = function(page, perPage) {
-  // ...
-};
-
+/**
+ * takes a list of ids, inflates them into `Model` instances
+ * @param ids {String|String[]} id or list of ids to inflate
+ * @param ignoreCache {Boolean} if any of the models are stored, this flag specifies to ignore the cache
+ * @returns {$q.promise}
+ */
 Factory.prototype.$map = function(ids, ignoreCache) {
-  // ...
+  var deferred = $q.defer();
+
+  // TODO: ...
+
+  return deferred.promise;
 };
 
+/**
+ * synchronous version of `Factory.$map`; assumes the data has already been loaded, as it references the cache
+ * @param ids {String|String[]} id or list of ids to inflate
+ * @returns {$q.promise}
+ */
 Factory.prototype.$mapSync = function(ids) {
-  // ...
+  var deferred = $q.defer();
+
+  // TODO: ...
+
+  return deferred.promise;
 };
 
 return Factory;
