@@ -47,12 +47,6 @@ var Factory = function(Model, config) {
   alias.store = {};
 
   /**
-   * used to throttle outgoing requests for the same data
-   * @type {Object}
-   */
-  alias.throttle = {};
-
-  /**
    * reference to model for later instantiations
    * @type {Model}
    */

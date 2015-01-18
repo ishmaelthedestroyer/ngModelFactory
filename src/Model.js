@@ -27,8 +27,14 @@ var Model = function(data) {
 util.inherits(Model, EventEmitter);
 
 /* ==========================================================================
-   Class-level methods
+   Class-level methods & properties
    ========================================================================== */
+
+/**
+ * used as a key / store to monitor duplicate and pending outgoing requests for the same data
+ * @type {Object}
+ */
+Model._$throttle = {};
 
 /**
  * performs a CRUD request
@@ -38,13 +44,32 @@ util.inherits(Model, EventEmitter);
  * @param perPage {Number} optional items to return per page, if paginating
  * @param data {Object} optional data to send if PUT, POST, or DELETE request
  * @param params {Object} optional key / value store of get parameters to send with the request
+ * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
  * @returns {$q.promise}
  */
-Model._$request = function(type, id, page, perPage, data, params) {
+  // ._$request('list', null, page, perPage, ignoreCache, params || null)
+Model._$request = function(type, id, page, perPage, data, params, ignoreCache) {
   var
     alias = this,
     path = alias._$config.endpoints[type].path,
+    throttleKey,
     config;
+
+  /*
+      var
+        deferred = $q.defer(),
+        path = userId ? ('/v1/collections?userId=' + userId) : '/v1/collections',
+        throttleKey = path;
+
+      if (!refresh && loaded) {
+        return dump();
+      } else if (throttle[throttleKey]) {
+        $log.debug(TAG + 'load', 'Throttling: ' + path);
+        return throttle[throttleKey];
+      }
+
+      throttle[throttleKey] = deferred.promise;
+   */
 
   while (path !== (path = path.replace(':id', id))) {
     // do nothing; iterate until all instances of `:id` replaced with the actual id
@@ -68,7 +93,18 @@ Model._$request = function(type, id, page, perPage, data, params) {
     config.path += '?' + queryParams.join('&');
   }
 
-  return new Endpoint.Request(config).execute();
+  throttleKey = config.method + config.path;
+  if (Model._$throttle[throttleKey]) {
+    return Model._$throttle[throttleKey];
+  }
+
+  var promise = new Endpoint.Request(config).execute();
+  Model._$throttle[throttleKey] = promise;
+  promise.finally(function() {
+    delete Model._$throttle[throttleKey];
+  })
+
+  return promise;
 };
 
 /**

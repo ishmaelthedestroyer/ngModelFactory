@@ -35,6 +35,14 @@ var
     {
       _id: 3,
       name: 'User Three'
+    },
+    {
+      _id: 4,
+      name: 'User Four'
+    },
+    {
+      _id: 5,
+      name: 'User Five'
     }
   ];
 
