@@ -149,13 +149,12 @@ Factory.prototype._$registerListeners = function(model) {
 
 /**
  * creates an instance of `Model` with the data given
- * @param data {Object} data to create the `Model` instance from
  * @returns {Model}
  */
-Factory.prototype.$create = function(data) {
+Factory.prototype.$create = function() {
   var
     alias = this,
-    model = new alias.Model(data);
+    model = alias.Model.apply(this, arguments);
 
   // mark instance with `_$isLocal` to represent it's not saved on the server
   model._$isLocal = true;
@@ -180,6 +179,15 @@ Factory.prototype.$find = function(id, ignoreCache, params) {
   var
     alias = this,
     deferred = $q.defer();
+
+  if (!ignoreCache) {
+    for (var key in alias.store) {
+      if (key === id) {
+        deferred.resolve(alias.store[key]);
+        return deferred.promise;
+      }
+    }
+  }
 
   alias.Model
     ._$request('find', id, null, null, ignoreCache, params || null)
