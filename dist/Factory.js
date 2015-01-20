@@ -111,9 +111,18 @@ Factory.prototype._$wrap = function(data) {
   var alias = this;
 
   if (alias.store[data._id]) {
+    var
+      oldValues = {},
+      copy;
+
     for (var key in data) {
+      oldValues[key] = angular.copy(alias[key]);
       alias.store[data._id][key] = data[key];
     }
+
+    copy = angular.copy(alias.store[data._id]);
+    alias.emit('$update', copy, oldValues);
+    alias.store[data._id].emit('$update', copy, oldValues);
   } else {
     alias.store[data._id] = new alias.Model(data);
     alias._$registerListeners(alias.store[data._id]);
@@ -142,13 +151,14 @@ Factory.prototype._$registerListeners = function(model) {
   model.on('$delete', function(model) {
     $log.debug(alias.config.TAG + 'registerEvents', 'Model deleted.', model);
     delete alias.store[model._id];
+    alias.emit('$delete', model);
   });
 
   return alias;
 };
 
 /**
- * creates an instance of `Model` with the data given
+ * creates an instance of `Model`
  * @returns {Model}
  */
 Factory.prototype.$create = function() {
@@ -164,6 +174,9 @@ Factory.prototype.$create = function() {
 
   // register event listeners
   alias._$registerListeners(alias.store[model._id]);
+
+  // notify subscribers of new model
+  alias.emit('$create', model);
 
   return model;
 };
@@ -192,7 +205,9 @@ Factory.prototype.$find = function(id, ignoreCache, params) {
   alias.Model
     ._$request('find', id, null, null, ignoreCache, params || null)
     .then(function(data) {
-      deferred.resolve(alias._$wrap(data));
+      var model = alias._$wrap(data);
+      deferred.resolve(model);
+      alias.emit('$find', model);
     })
     .catch(function(err) {
       deferred.reject(err);
@@ -222,9 +237,8 @@ Factory.prototype.$list = function(page, perPage, ignoreCache, params) {
         output.push(alias._$wrap(modelData));
       });
 
-      // delete throttle[throttleKey];
       deferred.resolve(output);
-      // deferred.resolve(alias._$wrap(data));
+      alias.emit('$list', output, page, perPage, params);
     })
     .catch(function(err) {
       deferred.reject(err);
