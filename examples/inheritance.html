@@ -68,11 +68,10 @@
         function($log, Model, util) {
             var User = function(data) {
                 if (!(this instanceof User)) {
-                    return new User(User, config);
+                    return new User(data);
                 }
 
                 Model.call(this, data);
-
                 this.followers = [];
 
                 return this;
@@ -83,6 +82,8 @@
             User.prototype.follow = function(user) {
                 user.followers.push(this);
             };
+
+            User.foo = 'bar';
 
             return User;
         }
@@ -115,10 +116,57 @@
         }
     ]);
 
+    app.service('Item', [
+        '$log',
+        'Model',
+        'Util',
+        function($log, Model, util) {
+            var Item = function(data) {
+                if (!(this instanceof Item)) {
+                    return new Item(Item);
+                }
+
+                Model.call(this, data);
+                return this;
+            };
+
+            util.inherits(Item, Model);
+            return Item;
+        }
+    ]);
+
+    app.service('ItemFactory', [
+        'Factory',
+        'Item',
+        'Util',
+        function(Factory, Item, util) {
+            var ItemFactory = function(Item, config) {
+                if (!(this instanceof ItemFactory)) {
+                    return new ItemFactory(Item, config);
+                }
+
+                Factory.call(this, Item, config);
+                return this;
+            };
+
+            util.inherits(ItemFactory, Factory);
+            return new ItemFactory(Item, {
+                endpoints: {
+                    list: { method: 'GET', path: '/items' },
+                    find: { method: 'GET', path: '/items/:id' },
+                    create: { method: 'POST', path: '/items' },
+                    update: { method: 'PUT', path: '/items/:id' },
+                    del: { method: 'DELETE', path: '/items/:id' }
+                }
+            });
+        }
+    ]);
+
     app.controller('AppCtrl', [
         '$log',
         'UserFactory',
-        function($log, UserFactory) {
+        'ItemFactory',
+        function($log, UserFactory, ItemFactory) {
             $log.debug('App loaded.');
 
             var alias = this;
@@ -149,7 +197,7 @@
               });
 
             // `factory.find(1)`
-            alias.model = null;
+            alias.user = null;
             UserFactory
               .$find(2)
               .then(function(model) {
@@ -157,6 +205,42 @@
               })
               .catch(function(err) {
                   $log.error('Error requesting `UserFactory.$find()`!');
+              });
+
+            // `factory.$list()`
+            alias.items = [];
+            ItemFactory
+              .$list(1, 20, false, { foo: 'bar', bam: 'bop' })
+              .then(function(models) {
+                  angular.forEach(models, function(model) {
+                      alias.items.push(model);
+                      model.on('$delete', function() {
+                          for (var i = 0, len = alias.list.length; i < len; i++) {
+                              if (alias.items[i]._id.toString() === model._id.toString()) {
+                                  alias.items.splice(i, 1);
+                                  break;
+                              }
+                          }
+
+                          if (alias.user._id.toString() === model._id.toString()) {
+                              alias.user = null;
+                          }
+                      });
+                  });
+              })
+              .catch(function(err) {
+                  $log.error('Error requesting `ItemFactory.$list()`!');
+              });
+
+            // `factory.find(1)`
+            alias.item = null;
+            ItemFactory
+              .$find(2)
+              .then(function(model) {
+                  alias.item = model;
+              })
+              .catch(function(err) {
+                  $log.error('Error requesting `ItemFactory.$find()`!');
               });
 
             return alias;

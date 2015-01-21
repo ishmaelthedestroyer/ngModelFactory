@@ -124,7 +124,7 @@ Factory.prototype._$wrap = function(data) {
     alias.emit('$update', copy, oldValues);
     alias.store[data._id].emit('$update', copy, oldValues);
   } else {
-    alias.store[data._id] = new alias.Model(data);
+    alias.store[data._id] = alias.Model.apply(this, arguments);
     alias._$registerListeners(alias.store[data._id]);
   }
 

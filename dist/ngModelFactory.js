@@ -124,7 +124,7 @@ Factory.prototype._$wrap = function(data) {
     alias.emit('$update', copy, oldValues);
     alias.store[data._id].emit('$update', copy, oldValues);
   } else {
-    alias.store[data._id] = new alias.Model(data);
+    alias.store[data._id] = alias.Model.apply(this, arguments);
     alias._$registerListeners(alias.store[data._id]);
   }
 
@@ -513,7 +513,7 @@ Model.prototype.$save = function() {
       data: alias.$serialize()
     };
 
-  var promise = alias.constructor.Model._$request(
+  var promise = alias.constructor._$request(
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
     null, // page (pagination)
@@ -541,7 +541,7 @@ Model.prototype.$delete = function() {
   var alias = this;
 
   alias.emit('$delete', alias);
-  var promise = alias.constructor.Model._$request('del', alias._id);
+  var promise = alias.constructor._$request('del', alias._id);
 
   promise
     .then(function(response) {

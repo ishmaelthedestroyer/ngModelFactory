@@ -93,9 +93,9 @@
                   endpoints: {
                       list: { method: 'GET', path: '/models' },
                       find: { method: 'GET', path: '/models/:id' },
-                      create: { method: 'POST', path: '' },
-                      update: { method: 'PUT', path: '' },
-                      del: { method: 'DEL', path: '' }
+                      create: { method: 'POST', path: '/models' },
+                      update: { method: 'PUT', path: '/models/:id' },
+                      del: { method: 'DEL', path: '/models/:id' }
                   }
               });
 
