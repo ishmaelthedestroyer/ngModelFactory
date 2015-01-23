@@ -40,15 +40,12 @@ Model._$throttle = {};
  * performs a CRUD request
  * @param type {String} CRUD type
  * @param id {String} id of object to request
- * @param page {Number} optional page, if paginating
- * @param perPage {Number} optional items to return per page, if paginating
  * @param data {Object} optional data to send if PUT, POST, or DELETE request
- * @param params {Object} optional key / value store of get parameters to send with the request
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
  * @returns {$q.promise}
  */
-  // ._$request('list', null, page, perPage, ignoreCache, params || null)
-Model._$request = function(type, id, page, perPage, data, params, ignoreCache) {
+Model._$request = function(type, id, data, options, ignoreCache) {
   var
     alias = this,
     path = alias._$config.endpoints[type].path,
@@ -56,41 +53,21 @@ Model._$request = function(type, id, page, perPage, data, params, ignoreCache) {
     config;
 
   /*
-      var
-        deferred = $q.defer(),
-        path = userId ? ('/v1/collections?userId=' + userId) : '/v1/collections',
-        throttleKey = path;
-
-      if (!refresh && loaded) {
-        return dump();
-      } else if (throttle[throttleKey]) {
-        $log.debug(TAG + 'load', 'Throttling: ' + path);
-        return throttle[throttleKey];
-      }
-
-      throttle[throttleKey] = deferred.promise;
+   * @param page {Number} optional page, if paginating
+   * @param perPage {Number} optional items to return per page, if paginating
    */
 
   while (path !== (path = path.replace(':id', id))) {
     // do nothing; iterate until all instances of `:id` replaced with the actual id
   }
 
-  config = {
+  config = angular.extend({
     method: alias._$config.endpoints[type].method,
     path: path
-  };
+  }, options);
 
   if (data) {
     config.data = data;
-  }
-
-  if (params) {
-    var queryParams = [];
-    for (var key in params) {
-      queryParams.push(key + '=' + params[key]);
-    }
-
-    config.path += '?' + queryParams.join('&');
   }
 
   throttleKey = config.method + config.path;
@@ -186,7 +163,8 @@ Model.prototype.$serialize = function() {
     serializedModel[key] = alias[key];
   }
 
-  // key inherited from EventEmitter
+  // remove keys from Factory, Model, and EventEmitter
+  delete serializedModel._$isLocal;
   delete serializedModel._events;
 
   return serializedModel;
@@ -203,40 +181,43 @@ Model.prototype.$update = function(data) {
     oldValues = {};
 
   for (var key in data) {
-    oldValues[key] = angular.copy(alias[key]);
-    alias[key] = data[key];
+    if (data.hasOwnProperty(key)) {
+      oldValues[key] = angular.copy(alias[key]);
+      alias[key] = data[key];
+    }
   }
 
-  alias.emit('$update', angular.copy(alias), oldValues);
+  alias.emit('$update', alias, oldValues);
   return alias;
 };
 
 /**
  * updates (or creates if not saved) the model on the server
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @returns {$q.promise}
  */
-Model.prototype.$save = function() {
+Model.prototype.$save = function(options) {
   var
     alias = this,
     config = {
       data: alias.$serialize()
     };
 
+  // (type, id, data, options, ignoreCache)
   var promise = alias.constructor._$request(
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
-    null, // page (pagination)
-    null, // per page (pagination)
-    alias.$serialize() // data to send
+    alias.$serialize(), // data to send,
+    options || null // extra options
   );
 
   promise.then(function(model) {
     // $log.debug(TAG + '$save', 'Updated model.', collection);
-    alias.$update(model);
-
     if (alias._$isLocal) {
       delete alias._$isLocal;
     }
+
+    alias.$update(model);
   });
 
   return promise;
@@ -244,13 +225,21 @@ Model.prototype.$save = function() {
 
 /**
  * deletes the model on the server
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @returns {$q.promise}
  */
-Model.prototype.$delete = function() {
+Model.prototype.$delete = function(options) {
   var alias = this;
 
   alias.emit('$delete', alias);
-  var promise = alias.constructor._$request('del', alias._id);
+
+  // (type, id, data, options, ignoreCache)
+  var promise = alias.constructor._$request(
+    'del', // CRUD type
+    alias._id, // id of object
+    alias.$serialize(), // data to send,
+    options || null // extra options
+  );
 
   promise
     .then(function(response) {

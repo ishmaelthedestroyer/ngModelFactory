@@ -108,27 +108,30 @@ Factory.prototype._$dump = function() {
  * @returns {Model}
  */
 Factory.prototype._$wrap = function(data) {
-  var alias = this;
+  var
+    alias = this,
+    model;
 
-  if (alias.store[data._id]) {
-    var
-      oldValues = {},
-      copy;
+  if (data._id && alias.store[data._id]) {
+    var oldValues = {};
+    model = alias.store[data._id];
 
     for (var key in data) {
-      oldValues[key] = angular.copy(alias[key]);
-      alias.store[data._id][key] = data[key];
+      if (data.hasOwnProperty(key)) {
+        oldValues[key] = angular.copy(alias[key]);
+        model[key] = data[key];
+      }
     }
 
-    copy = angular.copy(alias.store[data._id]);
-    alias.emit('$update', copy, oldValues);
-    alias.store[data._id].emit('$update', copy, oldValues);
+    alias.emit('$update', model, oldValues);
+    alias.store[data._id].emit('$update', model, oldValues);
   } else {
-    alias.store[data._id] = alias.Model.apply(this, arguments);
-    alias._$registerListeners(alias.store[data._id]);
+    model = alias.Model.apply(this, arguments);
+    alias._$registerListeners(model);
+    alias.store[model._id] = model;
   }
 
-  return alias.store[data._id];
+  return model;
 };
 
 /**
@@ -143,9 +146,12 @@ Factory.prototype._$registerListeners = function(model) {
 
     if (newValues._id !== oldValues._id) {
       $log.debug(alias.config.TAG + 'registerEvents', '_id updated.');
-      delete alias.store[model._id];
+
+      delete alias.store[oldValues._id];
       alias.store[model._id] = model;
     }
+
+    alias.emit('$update', model, oldValues);
   });
 
   model.on('$delete', function(model) {
@@ -184,11 +190,11 @@ Factory.prototype.$create = function() {
 /**
  * makes an async HTTP request to find a `Model` instance;
  * @param id {String} id of `Model` to find
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
- * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$find = function(id, ignoreCache, params) {
+Factory.prototype.$find = function(id, options, ignoreCache) {
   var
     alias = this,
     deferred = $q.defer();
@@ -203,7 +209,7 @@ Factory.prototype.$find = function(id, ignoreCache, params) {
   }
 
   alias.Model
-    ._$request('find', id, null, null, ignoreCache, params || null)
+    ._$request('find', id, null, null, options || null, ignoreCache)
     .then(function(data) {
       var model = alias._$wrap(data);
       deferred.resolve(model);
@@ -220,17 +226,18 @@ Factory.prototype.$find = function(id, ignoreCache, params) {
  * makes an async HTTP request for a `list` CRUD operation
  * @param page {Number} optional page, defaults to 1
  * @param perPage {Number} optional per page, defaults to config
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
- * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$list = function(page, perPage, ignoreCache, params) {
+Factory.prototype.$list = function(page, perPage, options, ignoreCache) {
   var
     alias = this,
     deferred = $q.defer();
 
   alias.Model
-    ._$request('list', null, page, perPage, ignoreCache, params || null)
+    // (type, id, data, options, ignoreCache)
+    ._$request('list', null, null, options || null, ignoreCache)
     .then(function(data) {
       var output = [];
       angular.forEach(data, function(modelData) {
@@ -238,7 +245,7 @@ Factory.prototype.$list = function(page, perPage, ignoreCache, params) {
       });
 
       deferred.resolve(output);
-      alias.emit('$list', output, page, perPage, params);
+      alias.emit('$list', output, page, perPage, options);
     })
     .catch(function(err) {
       deferred.reject(err);
@@ -250,11 +257,11 @@ Factory.prototype.$list = function(page, perPage, ignoreCache, params) {
 /**
  * takes a list of ids, inflates them into `Model` instances
  * @param ids {String|String[]} id or list of ids to inflate
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @param ignoreCache {Boolean} if any of the models are stored, this flag specifies to ignore the cache
- * @param params {Object} optional key / value store of get parameters to send with the request
  * @returns {$q.promise}
  */
-Factory.prototype.$map = function(ids, ignoreCache, params) {
+Factory.prototype.$map = function(ids, options, ignoreCache) {
   var deferred = $q.defer();
 
   // TODO: ...
@@ -331,15 +338,12 @@ Model._$throttle = {};
  * performs a CRUD request
  * @param type {String} CRUD type
  * @param id {String} id of object to request
- * @param page {Number} optional page, if paginating
- * @param perPage {Number} optional items to return per page, if paginating
  * @param data {Object} optional data to send if PUT, POST, or DELETE request
- * @param params {Object} optional key / value store of get parameters to send with the request
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
  * @returns {$q.promise}
  */
-  // ._$request('list', null, page, perPage, ignoreCache, params || null)
-Model._$request = function(type, id, page, perPage, data, params, ignoreCache) {
+Model._$request = function(type, id, data, options, ignoreCache) {
   var
     alias = this,
     path = alias._$config.endpoints[type].path,
@@ -347,41 +351,21 @@ Model._$request = function(type, id, page, perPage, data, params, ignoreCache) {
     config;
 
   /*
-      var
-        deferred = $q.defer(),
-        path = userId ? ('/v1/collections?userId=' + userId) : '/v1/collections',
-        throttleKey = path;
-
-      if (!refresh && loaded) {
-        return dump();
-      } else if (throttle[throttleKey]) {
-        $log.debug(TAG + 'load', 'Throttling: ' + path);
-        return throttle[throttleKey];
-      }
-
-      throttle[throttleKey] = deferred.promise;
+   * @param page {Number} optional page, if paginating
+   * @param perPage {Number} optional items to return per page, if paginating
    */
 
   while (path !== (path = path.replace(':id', id))) {
     // do nothing; iterate until all instances of `:id` replaced with the actual id
   }
 
-  config = {
+  config = angular.extend({
     method: alias._$config.endpoints[type].method,
     path: path
-  };
+  }, options);
 
   if (data) {
     config.data = data;
-  }
-
-  if (params) {
-    var queryParams = [];
-    for (var key in params) {
-      queryParams.push(key + '=' + params[key]);
-    }
-
-    config.path += '?' + queryParams.join('&');
   }
 
   throttleKey = config.method + config.path;
@@ -477,7 +461,8 @@ Model.prototype.$serialize = function() {
     serializedModel[key] = alias[key];
   }
 
-  // key inherited from EventEmitter
+  // remove keys from Factory, Model, and EventEmitter
+  delete serializedModel._$isLocal;
   delete serializedModel._events;
 
   return serializedModel;
@@ -494,40 +479,43 @@ Model.prototype.$update = function(data) {
     oldValues = {};
 
   for (var key in data) {
-    oldValues[key] = angular.copy(alias[key]);
-    alias[key] = data[key];
+    if (data.hasOwnProperty(key)) {
+      oldValues[key] = angular.copy(alias[key]);
+      alias[key] = data[key];
+    }
   }
 
-  alias.emit('$update', angular.copy(alias), oldValues);
+  alias.emit('$update', alias, oldValues);
   return alias;
 };
 
 /**
  * updates (or creates if not saved) the model on the server
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @returns {$q.promise}
  */
-Model.prototype.$save = function() {
+Model.prototype.$save = function(options) {
   var
     alias = this,
     config = {
       data: alias.$serialize()
     };
 
+  // (type, id, data, options, ignoreCache)
   var promise = alias.constructor._$request(
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
-    null, // page (pagination)
-    null, // per page (pagination)
-    alias.$serialize() // data to send
+    alias.$serialize(), // data to send,
+    options || null // extra options
   );
 
   promise.then(function(model) {
     // $log.debug(TAG + '$save', 'Updated model.', collection);
-    alias.$update(model);
-
     if (alias._$isLocal) {
       delete alias._$isLocal;
     }
+
+    alias.$update(model);
   });
 
   return promise;
@@ -535,13 +523,21 @@ Model.prototype.$save = function() {
 
 /**
  * deletes the model on the server
+ * @param options {Object} optional extra configuration for the `Endpoint` service
  * @returns {$q.promise}
  */
-Model.prototype.$delete = function() {
+Model.prototype.$delete = function(options) {
   var alias = this;
 
   alias.emit('$delete', alias);
-  var promise = alias.constructor._$request('del', alias._id);
+
+  // (type, id, data, options, ignoreCache)
+  var promise = alias.constructor._$request(
+    'del', // CRUD type
+    alias._id, // id of object
+    alias.$serialize(), // data to send,
+    options || null // extra options
+  );
 
   promise
     .then(function(response) {
