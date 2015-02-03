@@ -208,7 +208,7 @@ Model.prototype.$save = function(options) {
     alias._$isLocal ? 'create' : 'update', // CRUD type
     alias._id, // id of object
     alias.$serialize(), // data to send,
-    options || null // extra options
+      options || null // extra options
   );
 
   promise.then(function(model) {
@@ -219,6 +219,35 @@ Model.prototype.$save = function(options) {
 
     alias.$update(model);
   });
+
+  return promise;
+};
+
+/**
+ * makes a request to the server to load any updates
+ * @param options {Object} optional extra configuration for the `Endpoint` service
+ * @returns {$q.promise}
+ */
+Model.prototype.$reload = function(options) {
+  var alias = this;
+
+  alias.emit('$reload', alias);
+
+  // (type, id, data, options, ignoreCache)
+  var promise = alias.constructor._$request(
+    'find', // CRUD type
+    alias._id, // id of object
+    null, // data to send,
+      options || null // extra options
+  );
+
+  promise
+    .then(function(response) {
+      // ...
+    })
+    .catch(function(err) {
+      // ...
+    });
 
   return promise;
 };
@@ -238,7 +267,7 @@ Model.prototype.$delete = function(options) {
     'del', // CRUD type
     alias._id, // id of object
     alias.$serialize(), // data to send,
-    options || null // extra options
+      options || null // extra options
   );
 
   promise

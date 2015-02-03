@@ -255,6 +255,64 @@ Factory.prototype.$list = function(page, perPage, options, ignoreCache) {
 };
 
 /**
+ * performs a search against the models
+ * @param query {Object} key / value search
+ * @param options {Object} query options
+ */
+Factory.prototype.$query = function(query, options) {
+  var deferred = $q.defer();
+
+  // TODO: ...
+
+  return deferred.promise;
+};
+
+/**
+ * performs a synchronous search against the local data set
+ * @param query {Object} key / value search
+ * @param options {Object} query options
+ * @returns {[Model]}
+ */
+Factory.prototype.$querySync = function(query, options) {
+  if (!query || !Object.keys(query).length) {
+    return this._$dump();
+  }
+
+  return this._$dump().reduce(function(queue, model) {
+    for (var key in query) {
+      if (!query.hasOwnProperty(key)) {
+        continue;
+      }
+
+      switch (typeof query[key]) {
+        case 'function':
+          // if function, pass value and model to function
+          if (!query[key](model[key], model)) return queue;
+          break;
+        case 'boolean':
+          // if boolean, check for exact value
+          if (query[key] !== model[key]) return queue;
+          break;
+        case 'string':
+          // if string, check for exact value
+          if (query[key] !== model[key]) return queue;
+          break;
+        case 'object':
+          // if object, check for exact value
+          if (query[key] !== model[key]) return queue;
+          break;
+        default:
+          // if couldn't determine, don't add
+          return queue;
+      }
+    }
+
+    queue.push(model);
+    return queue;
+  }, []);
+};
+
+/**
  * takes a list of ids, inflates them into `Model` instances
  * @param ids {String|String[]} id or list of ids to inflate
  * @param options {Object} optional extra configuration for the `Endpoint` service
