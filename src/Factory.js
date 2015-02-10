@@ -229,6 +229,57 @@ Factory.prototype.$list = function(options) {
 };
 
 /**
+ * takes a list of ids, inflates them into `Model` instances
+ * @param ids {String|String[]} id or list of ids to inflate
+ * @param options {Object} optional extra configuration for the `Endpoint` service
+ * @returns {$q.promise}
+ */
+Factory.prototype.$populate = function(ids, options) {
+  var
+    alias = this,
+    deferred = $q.defer(),
+    requestType = 'populate',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      data: { ids: ids }, // TODO: remove duplicates from `$populate` request
+      ignoreCache: false,
+      throttle: true
+    }, options);
+
+  alias
+    .$request(config)
+    .then(function(data) {
+      var output = [];
+      angular.forEach(data, function(modelData) {
+        output.push(alias.$wrap(modelData));
+      });
+
+      deferred.resolve(output);
+      alias.emit('$populate', output);
+    })
+    .catch(function(err) {
+      deferred.reject(err);
+    });
+
+  return deferred.promise;
+};
+
+/**
+ * synchronous version of `Factory.$populate`;
+ * assumes the data has already been loaded, as it references the cache
+ * @param ids {String|String[]} id or list of ids to inflate
+ * @returns {$q.promise}
+ */
+Factory.prototype.$populateSync = function(ids) {
+  var deferred = $q.defer();
+
+  // TODO: ...
+
+  return deferred.promise;
+};
+
+/**
  * performs a search against the local data set of models
  * @param query {Object} key / value search
  * @param options {Object} query options
@@ -271,33 +322,4 @@ Factory.prototype.$query = function(query, options) {
     queue.push(model);
     return queue;
   }, []);
-};
-
-/**
- * takes a list of ids, inflates them into `Model` instances
- * @param ids {String|String[]} id or list of ids to inflate
- * @param options {Object} optional extra configuration for the `Endpoint` service
- * @param ignoreCache {Boolean} if any of the models are stored, this flag specifies to ignore the cache
- * @returns {$q.promise}
- */
-Factory.prototype.$populate = function(ids, options, ignoreCache) {
-  var deferred = $q.defer();
-
-  // TODO: ...
-
-  return deferred.promise;
-};
-
-/**
- * synchronous version of `Factory.$populate`;
- * assumes the data has already been loaded, as it references the cache
- * @param ids {String|String[]} id or list of ids to inflate
- * @returns {$q.promise}
- */
-Factory.prototype.$populateSync = function(ids) {
-  var deferred = $q.defer();
-
-  // TODO: ...
-
-  return deferred.promise;
 };
