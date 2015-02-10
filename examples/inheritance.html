@@ -63,7 +63,7 @@
 
     app.service('User', [
         '$log',
-        'Model',
+        'ngModelFactory.Model',
         'Util',
         function($log, Model, util) {
             var User = function(data) {
@@ -90,7 +90,7 @@
     ]);
 
     app.service('UserFactory', [
-        'Factory',
+        'ngModelFactory.Factory',
         'User',
         'Util',
         function(Factory, User, util) {
@@ -118,7 +118,7 @@
 
     app.service('Item', [
         '$log',
-        'Model',
+        'ngModelFactory.Model',
         'Util',
         function($log, Model, util) {
             var Item = function(data) {
@@ -136,7 +136,7 @@
     ]);
 
     app.service('ItemFactory', [
-        'Factory',
+        'ngModelFactory.Factory',
         'Item',
         'Util',
         function(Factory, Item, util) {

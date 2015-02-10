@@ -15,30 +15,10 @@ var Factory = function(Model, config) {
   }
 
   EventEmitter.call(this);
+  util.extend(this, mixins);
+
+  /** reference to self */
   var alias = this;
-
-  /**
-   * default configuration for the factory
-   */
-  var configDefaults = {
-    /**
-     * log identifier
-     * @type {String}
-     */
-    TAG: 'Factory::',
-
-    /**
-     * configuration for communicating with RESTful endpoints
-     */
-    endpoints: {
-
-      /**
-       * number of items to request for paginated `list` requests
-       * @type {Number}
-       */
-      perPage: 20
-    }
-  };
 
   /**
    * cache of instantiated models, the keys being the ids of each instance
@@ -52,13 +32,8 @@ var Factory = function(Model, config) {
    */
   alias.Model = Model;
 
-  /**
-   * configuration for factory, merge of defaults w/ user supplied
-   * @type {Object}
-   */
-    // FIXME: use `util.deepExtend`
-  alias.config = util.extend(configDefaults, config);
-  alias.Model._$init(config);
+  // run configuration function
+  alias.$init(config);
 
   // expose instance
   return alias;
@@ -67,26 +42,22 @@ var Factory = function(Model, config) {
 util.inherits(Factory, EventEmitter);
 
 /* ==========================================================================
-   Class-level methods
-   ========================================================================== */
-
-// ...
-
-/* ==========================================================================
    Instance-level methods
    ========================================================================== */
 
 /**
  * converts the local cache into an array of models
- * @returns {Array}
+ * @returns {[Model]}
  */
-Factory.prototype._$dump = function() {
+Factory.prototype.$dump = function() {
   var
     alias = this,
     dump = [];
 
   for (var key in alias.store) {
-    dump.push(alias.store[key]);
+    if (alias.store.hasOwnProperty(key)) {
+      dump.push(alias.store[key]);
+    }
   }
 
   return dump;
@@ -97,7 +68,7 @@ Factory.prototype._$dump = function() {
  * @param data {Object} model data
  * @returns {Model}
  */
-Factory.prototype._$wrap = function(data) {
+Factory.prototype.$wrap = function(data) {
   var
     alias = this,
     model;
@@ -116,26 +87,37 @@ Factory.prototype._$wrap = function(data) {
     alias.emit('$update', model, oldValues);
     alias.store[data._id].emit('$update', model, oldValues);
   } else {
+    // if model w/ id DOES NOT exist, create, add to cache, & register event listeners
     model = alias.Model.apply(this, arguments);
-    alias._$registerListeners(model);
+
+    // run configuration function
+    model.$init(alias._$config);
+
+    // register event listeners
+    alias.$registerListeners(model);
+
+    // add to cache
     alias.store[model._id] = model;
+
+    // notify subscribers of new model
+    alias.emit('$create', model);
   }
 
   return model;
 };
 
 /**
- * sets listeners on a model instance
+ * sets event listeners on a model instance
  * @param model {Model}
  * @returns {Factory}
  */
-Factory.prototype._$registerListeners = function(model) {
+Factory.prototype.$registerListeners = function(model) {
   var alias = this;
   model.on('$update', function(newValues, oldValues) {
-    $log.debug(alias.config.TAG + 'registerEvents', newValues, oldValues);
+    $log.debug(alias._$config.TAG + 'registerEvents::$update', newValues, oldValues);
 
-    if (newValues._id !== oldValues._id) {
-      $log.debug(alias.config.TAG + 'registerEvents', '_id updated.');
+    if (newValues && newValues._id && oldValues && oldValues._id && newValues._id !== oldValues._id) {
+      $log.debug(alias._$config.TAG + 'registerEvents', '_id updated.');
 
       delete alias.store[oldValues._id];
       alias.store[model._id] = model;
@@ -145,7 +127,7 @@ Factory.prototype._$registerListeners = function(model) {
   });
 
   model.on('$delete', function(model) {
-    $log.debug(alias.config.TAG + 'registerEvents', 'Model deleted.', model);
+    $log.debug(alias._$config.TAG + 'registerEvents::$delete', model);
     delete alias.store[model._id];
     alias.emit('$delete', model);
   });
@@ -160,19 +142,10 @@ Factory.prototype._$registerListeners = function(model) {
 Factory.prototype.$create = function() {
   var
     alias = this,
-    model = alias.Model.apply(this, arguments);
+    model = alias.$wrap.apply(this, arguments);
 
   // mark instance with `_$isLocal` to represent it's not saved on the server
   model._$isLocal = true;
-
-  // add to cache
-  alias.store[model._id] = model;
-
-  // register event listeners
-  alias._$registerListeners(alias.store[model._id]);
-
-  // notify subscribers of new model
-  alias.emit('$create', model);
 
   return model;
 };
@@ -181,27 +154,35 @@ Factory.prototype.$create = function() {
  * makes an async HTTP request to find a `Model` instance;
  * @param id {String} id of `Model` to find
  * @param options {Object} optional extra configuration for the `Endpoint` service
- * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
  * @returns {$q.promise}
  */
-Factory.prototype.$find = function(id, options, ignoreCache) {
+Factory.prototype.$find = function(id, options) {
   var
     alias = this,
-    deferred = $q.defer();
+    deferred = $q.defer(),
+    requestType = 'find',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      map: { ':id': id },
+      ignoreCache: false,
+      throttle: true
+    }, options);
 
-  if (!ignoreCache) {
+  if (!config || !config.ignoreCache) {
     for (var key in alias.store) {
-      if (key === id) {
+      if (alias.store.hasOwnProperty(key) && key === id) {
+        $log.debug(alias._$config.TAG + '$find', 'Found model in cache.', alias.store[key]);
         deferred.resolve(alias.store[key]);
         return deferred.promise;
       }
     }
   }
 
-  alias.Model
-    ._$request('find', id, null, null, options || null, ignoreCache)
+  alias
+    .$request(config)
     .then(function(data) {
-      var model = alias._$wrap(data);
+      var model = alias.$wrap(data);
       deferred.resolve(model);
       alias.emit('$find', model);
     })
@@ -214,28 +195,31 @@ Factory.prototype.$find = function(id, options, ignoreCache) {
 
 /**
  * makes an async HTTP request for a `list` CRUD operation
- * @param page {Number} optional page, defaults to 1
- * @param perPage {Number} optional per page, defaults to config
  * @param options {Object} optional extra configuration for the `Endpoint` service
- * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
  * @returns {$q.promise}
  */
-Factory.prototype.$list = function(page, perPage, options, ignoreCache) {
+Factory.prototype.$list = function(options) {
   var
     alias = this,
-    deferred = $q.defer();
+    deferred = $q.defer(),
+    requestType = 'list',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      ignoreCache: false,
+      throttle: true
+    }, options);
 
-  alias.Model
-    // (type, id, data, options, ignoreCache)
-    ._$request('list', null, null, options || null, ignoreCache)
+  alias
+    .$request(config)
     .then(function(data) {
       var output = [];
       angular.forEach(data, function(modelData) {
-        output.push(alias._$wrap(modelData));
+        output.push(alias.$wrap(modelData));
       });
 
       deferred.resolve(output);
-      alias.emit('$list', output, page, perPage, options);
+      alias.emit('$list', output);
     })
     .catch(function(err) {
       deferred.reject(err);
@@ -245,30 +229,17 @@ Factory.prototype.$list = function(page, perPage, options, ignoreCache) {
 };
 
 /**
- * performs a search against the models
- * @param query {Object} key / value search
- * @param options {Object} query options
- */
-Factory.prototype.$query = function(query, options) {
-  var deferred = $q.defer();
-
-  // TODO: ...
-
-  return deferred.promise;
-};
-
-/**
- * performs a synchronous search against the local data set
+ * performs a search against the local data set of models
  * @param query {Object} key / value search
  * @param options {Object} query options
  * @returns {[Model]}
  */
-Factory.prototype.$querySync = function(query, options) {
+Factory.prototype.$query = function(query, options) {
   if (!query || !Object.keys(query).length) {
-    return this._$dump();
+    return this.$dump();
   }
 
-  return this._$dump().reduce(function(queue, model) {
+  return this.$dump().reduce(function(queue, model) {
     for (var key in query) {
       if (!query.hasOwnProperty(key)) {
         continue;
@@ -309,7 +280,7 @@ Factory.prototype.$querySync = function(query, options) {
  * @param ignoreCache {Boolean} if any of the models are stored, this flag specifies to ignore the cache
  * @returns {$q.promise}
  */
-Factory.prototype.$map = function(ids, options, ignoreCache) {
+Factory.prototype.$populate = function(ids, options, ignoreCache) {
   var deferred = $q.defer();
 
   // TODO: ...
@@ -318,11 +289,12 @@ Factory.prototype.$map = function(ids, options, ignoreCache) {
 };
 
 /**
- * synchronous version of `Factory.$map`; assumes the data has already been loaded, as it references the cache
+ * synchronous version of `Factory.$populate`;
+ * assumes the data has already been loaded, as it references the cache
  * @param ids {String|String[]} id or list of ids to inflate
  * @returns {$q.promise}
  */
-Factory.prototype.$mapSync = function(ids) {
+Factory.prototype.$populateSync = function(ids) {
   var deferred = $q.defer();
 
   // TODO: ...

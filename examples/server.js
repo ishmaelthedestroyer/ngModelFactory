@@ -50,6 +50,12 @@ app.use(express.static(__dirname + '/../', {
   // maxAge: 2592000000 // 30 day cache
 }));
 
+/** log all requests to logger */
+app.use(function(req, res, next) {
+  console.log('%s %s', req.method, req.url);
+  next();
+});
+
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
   extended: true

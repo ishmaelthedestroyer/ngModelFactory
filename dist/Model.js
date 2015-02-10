@@ -1,11 +1,15 @@
-angular.module("Model", ["EventEmitter", "Endpoint", "Util"])
-.service("Model", [
+angular.module("ngModelFactory.Model", [
+"EventEmitter",
+"Endpoint",
+"Util"
+]).service("ngModelFactory.Model", [
 "$log",
 "$q",
 "Endpoint",
 "EventEmitter",
+"ngModelFactory.mixins",
 "Util",
-function($log, $q, Endpoint, EventEmitter, util) {
+function($log, $q, Endpoint, EventEmitter, mixins, util) {
 
 /* ==========================================================================
    Constructors
@@ -23,137 +27,21 @@ var Model = function(data) {
   }
 
   EventEmitter.call(this);
+  util.extend(this, mixins);
+
+  /** reference to self */
   var alias = this;
 
   for (var key in data) {
-    alias[key] = data[key];
+    if (data.hasOwnProperty(key)) {
+      alias[key] = data[key];
+    }
   }
 
   return alias;
 };
 
-// inherit from `EventEmitter`, setup default configuration
 util.inherits(Model, EventEmitter);
-
-/* ==========================================================================
-   Class-level methods & properties
-   ========================================================================== */
-
-/**
- * used as a key / store to monitor duplicate and pending outgoing requests for the same data
- * @type {Object}
- */
-Model._$throttle = {};
-
-/**
- * performs a CRUD request
- * @param type {String} CRUD type
- * @param id {String} id of object to request
- * @param data {Object} optional data to send if PUT, POST, or DELETE request
- * @param options {Object} optional extra configuration for the `Endpoint` service
- * @param ignoreCache {Boolean} specifies that if the item is already in the cache, make another request anyways
- * @returns {$q.promise}
- */
-Model._$request = function(type, id, data, options, ignoreCache) {
-  var
-    alias = this,
-    path = alias._$config.endpoints[type].path,
-    throttleKey,
-    config;
-
-  /*
-   * @param page {Number} optional page, if paginating
-   * @param perPage {Number} optional items to return per page, if paginating
-   */
-
-  while (path !== (path = path.replace(':id', id))) {
-    // do nothing; iterate until all instances of `:id` replaced with the actual id
-  }
-
-  config = angular.extend({
-    method: alias._$config.endpoints[type].method,
-    path: path
-  }, options);
-
-  if (data) {
-    config.data = data;
-  }
-
-  throttleKey = config.method + config.path;
-  if (Model._$throttle[throttleKey]) {
-    return Model._$throttle[throttleKey];
-  }
-
-  var promise = new Endpoint.Request(config).execute();
-  Model._$throttle[throttleKey] = promise;
-  promise.finally(function() {
-    delete Model._$throttle[throttleKey];
-  })
-
-  return promise;
-};
-
-/**
- * sets up configuration for the class
- * @param config {Object} custom configuration
- * @returns {Model}
- */
-Model._$init = function(config) {
-  var
-
-    alias = this,
-
-    /**
-     * default configuration for the model
-     */
-    configDefaults = {
-      /**
-       * configuration for communicating with RESTful endpoints
-       */
-      endpoints: {
-
-        /**
-         * optional prefix for the endpoints
-         * @type {String}
-         */
-        prefix: '',
-
-        /**
-         * HTTP method + path for `list` requests
-         */
-        list: { method: 'GET', path: '/models' },
-
-        /**
-         * HTTP method + path for `find` requests
-         */
-        find: { method: 'GET', path: '/models/:id' },
-
-        /**
-         * HTTP method + path for `create` requests
-         */
-        create: { method: 'POST', path: '/models' },
-
-        /**
-         * HTTP method + path for `update` requests
-         */
-        update: { method: 'PUT', path: '/models/:id' },
-
-        /**
-         * HTTP method + path for `delete` requests
-         */
-        del: { method: 'DELETE', path: '/models/:id' }
-      }
-    };
-
-  /**
-   * configuration for class, merge of defaults w/ user supplied config
-   * @type {Object}
-   */
-    // FIXME: use `util.deepExtend`
-  alias._$config = util.extend(configDefaults, config);
-
-  return alias;
-};
 
 /* ==========================================================================
    Instance-level methods
@@ -169,7 +57,9 @@ Model.prototype.$serialize = function() {
     serializedModel = {};
 
   for (var key in alias) {
-    serializedModel[key] = alias[key];
+    if (alias.hasOwnProperty(key) && typeof alias[key] !== 'function') {
+      serializedModel[key] = alias[key];
+    }
   }
 
   // remove keys from Factory, Model, and EventEmitter
@@ -208,20 +98,18 @@ Model.prototype.$update = function(data) {
 Model.prototype.$save = function(options) {
   var
     alias = this,
-    config = {
-      data: alias.$serialize()
-    };
-
-  // (type, id, data, options, ignoreCache)
-  var promise = alias.constructor._$request(
-    alias._$isLocal ? 'create' : 'update', // CRUD type
-    alias._id, // id of object
-    alias.$serialize(), // data to send,
-      options || null // extra options
-  );
+    requestType = alias._$isLocal ? 'create' : 'update',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      data: alias.$serialize(),
+      map: { ':id': alias._id },
+      ignoreCache: true,
+      throttle: false
+    }, options),
+    promise = alias.$request(config);
 
   promise.then(function(model) {
-    // $log.debug(TAG + '$save', 'Updated model.', collection);
     if (alias._$isLocal) {
       delete alias._$isLocal;
     }
@@ -238,25 +126,21 @@ Model.prototype.$save = function(options) {
  * @returns {$q.promise}
  */
 Model.prototype.$reload = function(options) {
-  var alias = this;
+  var
+    alias = this,
+    requestType = 'find',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      map: { ':id': alias._id },
+      ignoreCache: true,
+      throttle: false
+    }, options),
+    promise = alias.$request(config);
 
-  alias.emit('$reload', alias);
-
-  // (type, id, data, options, ignoreCache)
-  var promise = alias.constructor._$request(
-    'find', // CRUD type
-    alias._id, // id of object
-    null, // data to send,
-      options || null // extra options
-  );
-
-  promise
-    .then(function(response) {
-      // ...
-    })
-    .catch(function(err) {
-      // ...
-    });
+  promise.then(function(response) {
+    alias.$update(response);
+  });
 
   return promise;
 };
@@ -267,30 +151,20 @@ Model.prototype.$reload = function(options) {
  * @returns {$q.promise}
  */
 Model.prototype.$delete = function(options) {
-  var alias = this;
+  var
+    alias = this,
+    requestType = 'del',
+    config = util.extend({
+      method: alias._$config.endpoints[requestType].method,
+      path: alias._$config.endpoints[requestType].path,
+      map: { ':id': alias._id },
+      ignoreCache: true,
+      throttle: true
+    }, options);
 
   alias.emit('$delete', alias);
-
-  // (type, id, data, options, ignoreCache)
-  var promise = alias.constructor._$request(
-    'del', // CRUD type
-    alias._id, // id of object
-    alias.$serialize(), // data to send,
-      options || null // extra options
-  );
-
-  promise
-    .then(function(response) {
-      // ...
-    })
-    .catch(function(err) {
-      // ...
-    });
-
-  return promise;
+  return alias.$request(config);
 };
-
-Model._$init(null);
 
 return Model;
 

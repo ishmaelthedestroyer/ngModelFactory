@@ -100,8 +100,8 @@
 
     app.controller('AppCtrl', [
         '$log',
-        'Factory',
-        'Model',
+        'ngModelFactory.Factory',
+        'ngModelFactory.Model',
         function($log, Factory, Model) {
             $log.debug('App loaded.');
             var
@@ -112,7 +112,7 @@
                       find: { method: 'GET', path: '/models/:id' },
                       create: { method: 'POST', path: '/models' },
                       update: { method: 'PUT', path: '/models/:id' },
-                      del: { method: 'DEL', path: '/models/:id' }
+                      del: { method: 'DELETE', path: '/models/:id' }
                   }
               });
 
