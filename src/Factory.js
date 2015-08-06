@@ -90,17 +90,17 @@ Factory.prototype.$wrap = function(data) {
     // if model w/ id DOES NOT exist, create, add to cache, & register event listeners
     model = alias.Model.apply(this, arguments);
 
+    // run configuration function
+    model.$init(alias._$config);
+
+    // register event listeners
+    alias.$registerListeners(model);
+
     // add to cache
     alias.store[model._id] = model;
 
     // notify subscribers of new model
     alias.emit('$create', model);
-  }
-
-  // configure & set event listeners if no config set
-  if (!model._$config) {
-    model.$init(alias._$config);
-    alias.$registerListeners(model);
   }
 
   return model;
