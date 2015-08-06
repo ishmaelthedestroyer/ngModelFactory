@@ -104,17 +104,17 @@ Factory.prototype.$wrap = function(data) {
     // if model w/ id DOES NOT exist, create, add to cache, & register event listeners
     model = alias.Model.apply(this, arguments);
 
-    // run configuration function
-    model.$init(alias._$config);
-
-    // register event listeners
-    alias.$registerListeners(model);
-
     // add to cache
     alias.store[model._id] = model;
 
     // notify subscribers of new model
     alias.emit('$create', model);
+  }
+
+  // configure & set event listeners if no config set
+  if (!model._$config) {
+    model.$init(alias._$config);
+    alias.$registerListeners(model);
   }
 
   return model;
@@ -295,13 +295,27 @@ Factory.prototype.$populateSync = function(ids) {
 
 /**
  * performs a search against the local data set of models
- * @param query {Object} key / value search
+ * @param query {Object|Function} key / value search or function
  * @param options {Object} query options
  * @returns {[Model]}
  */
 Factory.prototype.$query = function(query, options) {
-  if (!query || !Object.keys(query).length) {
-    return this.$dump();
+  if (!query) {
+    throw new Error('Must pass query to `Factory.$query()`. ' +
+      'If you want the entire dataset, use `Factory.$dump().`');
+  } else if (!util.isJSON(query) && !util.isFunction(query)) {
+    throw new Error('Must pass object or function to `Factory.$query()`.');
+  }
+
+  // if function, iterate over dataset applying function
+  if (util.isFunction(query)) {
+    return this.$dump().reduce(function(queue, model) {
+      if (query(model)) {
+        queue.push(model);
+      }
+
+      return queue;
+    }, []);
   }
 
   return this.$dump().reduce(function(queue, model) {
