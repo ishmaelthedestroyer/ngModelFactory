@@ -51,6 +51,7 @@ Model.prototype.$serialize = function() {
 
   // remove keys from Factory, Model, and EventEmitter
   delete serializedModel._$isLocal;
+  delete serializedModel._$config
   delete serializedModel._events;
 
   return serializedModel;
